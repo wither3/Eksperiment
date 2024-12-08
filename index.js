@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs').promises;
 const path = require('path');
+const { upload } = require('@vercel/blob/client');
 
 const app = express();
 app.use(cors()); // Mengaktifkan CORS
@@ -14,17 +15,22 @@ app.get('/write-json', async (req, res) => {
       timestamp: new Date(),
     };
 
-    // Lokasi penyimpanan sementara (hanya untuk fungsi serverless, gunakan /tmp)
-    const filePath = path.join('/tmp', 'data.json');
+    // Lokasi penyimpanan sementara
+    const tempFilePath = path.join('/tmp', 'data.json');
 
-    // Tulis data ke file
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    // Tulis data ke file sementara
+    await fs.writeFile(tempFilePath, JSON.stringify(data, null, 2));
 
-    // Kirimkan respon ke client
+    // Upload file ke Blop Storage
+    const blob = await upload(tempFilePath, tempFilePath, {
+      access: 'public', // Akses publik
+    });
+
+    // Kirimkan URL hasil upload ke client
     res.status(200).json({
       success: true,
-      message: 'File successfully written!',
-      filePath,
+      message: 'File successfully written and uploaded!',
+      blobUrl: blob.url, // URL file di Blop Storage
     });
   } catch (error) {
     console.error('Error writing file:', error);
