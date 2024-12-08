@@ -13,46 +13,45 @@ app.get('/write-json', async (req, res) => {
     const newMessage = req.query.req;
 
     if (!newMessage) {
-      return res.status(400).json({ success: false, message: 'Text parameter is required' });
+      return res.status(400).json({ success: false, message: 'Parameter "req" is required' });
     }
 
-    // Ambil data lama dari file JSON di Vercel Blob
     let existingData = [];
     try {
+      // Baca file JSON dari Blob
       const blob = await get(BLOB_FILE_NAME);
       existingData = JSON.parse(blob.data.toString()); // Parsing data lama
     } catch (err) {
       console.log('File not found, creating a new one.');
     }
 
-    // Tambahkan data baru ke array
+    // Tambahkan data baru
     existingData.push({
       message: newMessage,
       timestamp: new Date().toISOString(),
     });
 
-    // Simpan data baru ke file JSON di Vercel Blob
-    const updatedBlob = await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
-      access: 'public',
+    // Tulis data kembali ke file JSON yang sama
+    await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
+      access: 'public', // Pastikan file dapat diakses
     });
 
-    // Kirimkan respon sukses
+    // Kirim respons sukses
     res.status(200).json({
       success: true,
-      message: 'Data successfully updated in blob.',
-      fileUrl: updatedBlob.url, // URL file JSON yang diperbarui
+      message: 'Data successfully updated in the JSON file.',
+      fileUrl: `https://vercel-storage-name.vercel.app/${BLOB_FILE_NAME}`,
     });
   } catch (error) {
-    console.error('Error updating file:', error);
+    console.error('Error writing to JSON file:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update file.',
+      message: 'Failed to update JSON file.',
       error: error.message,
     });
   }
 });
 
-// Jalankan server
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
