@@ -4,13 +4,7 @@ const { tiktokDl } = require('./tikwm2.js');
 
 const app = express();
 const dbPath = './database.db'; // Jalur file database
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error membuka database:', err);
-  } else {
-    console.log('Database terbuka.');
-  }
-});
+const db = new sqlite3.Database(dbPath); // Buat koneksi database
 
 db.serialize(() => {
   db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
