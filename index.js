@@ -1,8 +1,10 @@
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
+require('dotenv').config();
 
 const app = express();
-const db = new sqlite3.Database('messages.db'); // Gunakan file database
+const dbFile = process.env.DB_FILE || 'messages.db'; // Gunakan environment variable
+const db = new sqlite3.Database(dbFile);
 
 db.serialize(() => {
   db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
@@ -34,7 +36,7 @@ app.get('/read-json', (req, res) => {
   });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Gunakan environment variable
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
