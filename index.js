@@ -79,11 +79,20 @@ app.get('/read-tikwm', (req, res) => {
       console.error('Error:', err);
       return res.status(500).json({ success: false, message: 'Gagal membaca data TikTok.' });
     }
-    res.status(200).json({ success: true, data: rows });
+
+    // Format data menjadi lebih rapi
+    const formattedData = rows.map(row => ({
+      id: row.id,
+      url: row.url,
+      data: JSON.parse(row.data), // Mengubah string JSON kembali menjadi objek
+      timestamp: row.timestamp
+    }));
+
+    res.status(200).json({ success: true, data: formattedData });
   });
 });
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
+  console.log(`Server berjalan di http`);
 });
