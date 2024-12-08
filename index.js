@@ -14,6 +14,33 @@ app.get('/write-json', (req, res) => {
     return res.status(400).json({ success: false, message: 'Parameter "req" is required' });
   }
 
+app.get('/tikwm/download', async (req, res) => {
+  try {
+    const url = req.query.url;
+    if (!url) {
+      return res.status(400).json({ error: 'URL TikTok harus diberikan dalam parameter "url".' });
+    }
+
+    const tikDlData = await tiktokDl(url);
+    if (tikDlData) {
+      const timestamp = new Date().toISOString();
+      db.run('INSERT INTO messages (message, timestamp) VALUES (?, ?)', [tikDlData, timestamp], function (err) {
+        if (err) {
+          console.error('Error menyimpan data:', err);
+          return res.status(500).json({ success: false, message: 'Gagal menyimpan data.' });
+        }
+        console.log('Berhasil menyimpan data ke database.');
+        return res.status(200).json({ success: true, data: tikDlData });
+      });
+    } else {
+      return res.status(404).json({ error: 'Tidak ada data yang ditemukan untuk URL yang diberikan.' });
+    }
+  } catch (error) {
+    console.error('Kesalahan saat mengunduh data TikTok:', error.message);
+    return res.status(500).json({ error: 'Terjadi kesalahan internal server.', detail: error.message });
+  }
+});
+  
   const timestamp = new Date().toISOString();
   db.run('INSERT INTO messages (message, timestamp) VALUES (?, ?)', [newMessage, timestamp], function (err) {
     if (err) {
