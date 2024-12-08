@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { get, put, del } = require('@vercel/blob');
+const { get, put } = require('@vercel/blob');
 
 const app = express();
 app.use(cors());
@@ -18,54 +18,34 @@ app.get('/write-json', async (req, res) => {
 
     let existingData = [];
     try {
-      // Cek apakah file JSON sudah ada
+      // Membaca file JSON jika sudah ada
       const blob = await get(BLOB_FILE_NAME);
-      existingData = JSON.parse(blob.data.toString()); // Baca isi file JSON lama
+      existingData = JSON.parse(blob.data.toString()); // Parsing isi file JSON
     } catch (err) {
       console.log('File not found, creating a new one.');
     }
 
-    // Tambahkan data baru
+    // Tambahkan data baru ke dalam array
     existingData.push({
       message: newMessage,
       timestamp: new Date().toISOString(),
     });
 
-    // Tulis ulang data ke file yang sama
+    // Overwrite file yang sama di Blob
     await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
       access: 'public',
     });
 
-    // Kirim respons sukses
     res.status(200).json({
       success: true,
-      message: 'Data successfully updated in the JSON file.',
-      fileUrl: `https://vercel-storage-name.vercel.app/${BLOB_FILE_NAME}`,
+      message: 'Data successfully written to the JSON file.',
+      fileUrl: `https://your-vercel-storage-url/${BLOB_FILE_NAME}`,
     });
   } catch (error) {
     console.error('Error writing to JSON file:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update JSON file.',
-      error: error.message,
-    });
-  }
-});
-
-app.get('/delete-json', async (req, res) => {
-  try {
-    // Hapus file JSON dari Blob
-    await del(BLOB_FILE_NAME);
-
-    res.status(200).json({
-      success: true,
-      message: 'JSON file successfully deleted.',
-    });
-  } catch (error) {
-    console.error('Error deleting JSON file:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete JSON file.',
+      message: 'Failed to write JSON file.',
       error: error.message,
     });
   }
