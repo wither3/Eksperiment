@@ -11,7 +11,7 @@ app.use(express.json()); // Untuk membaca JSON dari body request
 const filePath = path.join(__dirname, 'data.json');
 
 // Endpoint untuk menulis teks ke file JSON
-app.post('/write-text', async (req, res) => {
+app.get('/write-text', async (req, res) => {
   try {
     const { text } = req.body;
 
