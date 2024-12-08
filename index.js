@@ -4,7 +4,7 @@ const cors = require('cors'); // Import cors
 const { tiktokDl } = require('./tikwm2.js'); // Import tiktokDl
 
 const app = express();
-const db = new sqlite3.Database(':memory:'); // Atau gunakan file DB untuk persistensi
+const db = new sqlite3.Database('mydatabase.db'); // Menggunakan file DB untuk persistensi
 
 // Gunakan middleware CORS
 app.use(cors());
@@ -94,5 +94,5 @@ app.get('/read-tikwm', (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server berjalan di http`);
-});
+  console.log(`Server berjalan di http://localhost:${PORT}`);
+}); 
