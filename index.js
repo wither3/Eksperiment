@@ -5,7 +5,7 @@ const { Upstash } = require('@upstash/redis'); // Import Upstash
 
 const app = express();
 const upstash = new Upstash({
-  url: 'rediss://default:AYGRAAIjcDEyZDFlZTY3OWUyMzM0MDcyOTNiYmM0MDRmMWVlZWE4MXAxMA@summary-goshawk-33169.upstash.io:6379', // Ganti dengan URL Upstash Anda
+  url: 'rediss://default:AYGRAAIjcDEyZDFlZTY3OWUyMzM0MDcyOTNiYmM0MDRmMWVlZWE4MXAxMA@summary-goshawk-33169.upstash.io', // Ganti dengan URL Upstash Anda
   token: 'AYGRAAIjcDEyZDFlZTY3OWUyMzM0MDcyOTNiYmM0MDRmMWVlZWE4MXAxMA' // Ganti dengan token Upstash Anda
 });
 
