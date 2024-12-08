@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { get, put } = require('@vercel/blob');
+const { get, put, del } = require('@vercel/blob');
 
 const app = express();
 app.use(cors());
@@ -18,9 +18,9 @@ app.get('/write-json', async (req, res) => {
 
     let existingData = [];
     try {
-      // Baca file JSON dari Blob
+      // Cek apakah file JSON sudah ada
       const blob = await get(BLOB_FILE_NAME);
-      existingData = JSON.parse(blob.data.toString()); // Parsing data lama
+      existingData = JSON.parse(blob.data.toString()); // Baca isi file JSON lama
     } catch (err) {
       console.log('File not found, creating a new one.');
     }
@@ -31,9 +31,9 @@ app.get('/write-json', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // Tulis data kembali ke file JSON yang sama
+    // Tulis ulang data ke file yang sama
     await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
-      access: 'public', // Pastikan file dapat diakses
+      access: 'public',
     });
 
     // Kirim respons sukses
@@ -47,6 +47,25 @@ app.get('/write-json', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update JSON file.',
+      error: error.message,
+    });
+  }
+});
+
+app.get('/delete-json', async (req, res) => {
+  try {
+    // Hapus file JSON dari Blob
+    await del(BLOB_FILE_NAME);
+
+    res.status(200).json({
+      success: true,
+      message: 'JSON file successfully deleted.',
+    });
+  } catch (error) {
+    console.error('Error deleting JSON file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete JSON file.',
       error: error.message,
     });
   }
