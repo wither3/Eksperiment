@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const BLOB_FILE_NAME = 'datanya-ElUkelUGMtvaBsM1xWKo6Sp3aG1sDt.json';
+const BLOB_FILE_NAME = 'datanya-FBoocHcPmdUatm6T0rOsj7LAXr079N.json';
 
 app.get('/write-json', async (req, res) => {
   try {
@@ -22,7 +22,7 @@ app.get('/write-json', async (req, res) => {
       const blob = await get(BLOB_FILE_NAME);
       existingData = JSON.parse(blob.data.toString()); // Parsing data lama
     } catch (err) {
-      console.log('File not found or empty, creating a new one.');
+      console.log('File not found, creating a new one.');
     }
 
     // Tambahkan data baru ke array
@@ -36,17 +36,17 @@ app.get('/write-json', async (req, res) => {
       access: 'public',
     });
 
-    // Kirimkan URL file JSON kepada client
+    // Kirimkan respon sukses
     res.status(200).json({
       success: true,
-      message: 'File successfully updated',
-      blobUrl: updatedBlob.url, // URL file JSON
+      message: 'Data successfully updated in blob.',
+      fileUrl: updatedBlob.url, // URL file JSON yang diperbarui
     });
   } catch (error) {
     console.error('Error updating file:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update file',
+      message: 'Failed to update file.',
       error: error.message,
     });
   }
