@@ -1,42 +1,52 @@
 const express = require('express');
 const cors = require('cors');
-const { put } = require('@vercel/blob');
+const { get, put } = require('@vercel/blob');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const BLOB_FILE_NAME = 'datanya-ElUkelUGMtvaBsM1xWKo6Sp3aG1sDt.json';
+
 app.get('/write-json', async (req, res) => {
   try {
-    // Ambil teks dari query parameter
-    const text = req.query.req;
+    const newMessage = req.query.req;
 
-    if (!text) {
+    if (!newMessage) {
       return res.status(400).json({ success: false, message: 'Text parameter is required' });
     }
 
-    // Data yang akan disimpan di file JSON
-    const data = {
-      message: text,
-      timestamp: new Date().toISOString(),
-    };
+    // Ambil data lama dari file JSON di Vercel Blob
+    let existingData = [];
+    try {
+      const blob = await get(BLOB_FILE_NAME);
+      existingData = JSON.parse(blob.data.toString()); // Parsing data lama
+    } catch (err) {
+      console.log('File not found or empty, creating a new one.');
+    }
 
-    // Upload data JSON ke Vercel Blob
-    const blob = await put('data.json', JSON.stringify(data, null, 2), {
-      access: 'public', // File dapat diakses secara publik
+    // Tambahkan data baru ke array
+    existingData.push({
+      message: newMessage,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Simpan data baru ke file JSON di Vercel Blob
+    const updatedBlob = await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
+      access: 'public',
     });
 
     // Kirimkan URL file JSON kepada client
     res.status(200).json({
       success: true,
-      message: 'File successfully written to Vercel Blob',
-      blobUrl: blob.url, // URL file JSON
+      message: 'File successfully updated',
+      blobUrl: updatedBlob.url, // URL file JSON
     });
   } catch (error) {
-    console.error('Error writing to Vercel Blob:', error);
+    console.error('Error updating file:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to write file to Vercel Blob',
+      message: 'Failed to update file',
       error: error.message,
     });
   }
