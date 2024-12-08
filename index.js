@@ -13,11 +13,15 @@ const filePath = path.join(__dirname, 'data.json');
 // Endpoint untuk menulis teks ke file JSON
 app.get('/write-text', async (req, res) => {
   try {
-    const { text } = req.body;
+    // Ambil parameter dari query string
+    const text = req.query.req;
 
     if (!text) {
-      return res.status(400).json({ success: false, message: 'Text is required' });
+      return res.status(400).json({ success: false, message: 'Text is required in the query parameter' });
     }
+
+    // Lokasi file JSON
+    const filePath = path.join(__dirname, 'data.json');
 
     // Baca file jika ada, jika tidak buat file baru
     let data = {};
