@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { get, put } = require('@vercel/blob');
+const { get, put, del } = require('@vercel/blob');
 
 const app = express();
 app.use(cors());
@@ -18,34 +18,41 @@ app.get('/write-json', async (req, res) => {
 
     let existingData = [];
     try {
-      // Membaca file JSON jika sudah ada
+      // Membaca file JSON yang sudah ada
       const blob = await get(BLOB_FILE_NAME);
-      existingData = JSON.parse(blob.data.toString()); // Parsing isi file JSON
+      existingData = JSON.parse(blob.data.toString());
     } catch (err) {
-      console.log('File not found, creating a new one.');
+      console.log('File tidak ditemukan. Membuat file baru...');
     }
 
-    // Tambahkan data baru ke dalam array
+    // Menambahkan data baru ke file JSON
     existingData.push({
       message: newMessage,
       timestamp: new Date().toISOString(),
     });
 
-    // Overwrite file yang sama di Blob
+    // Hapus file lama sebelum menimpa
+    try {
+      await del(BLOB_FILE_NAME); // Menghapus file lama
+    } catch (err) {
+      console.log('Tidak ada file lama untuk dihapus.');
+    }
+
+    // Menulis ulang file yang sama dengan data terbaru
     await put(BLOB_FILE_NAME, JSON.stringify(existingData, null, 2), {
       access: 'public',
     });
 
     res.status(200).json({
       success: true,
-      message: 'Data successfully written to the JSON file.',
+      message: 'Data berhasil ditulis ke file JSON.',
       fileUrl: `https://your-vercel-storage-url/${BLOB_FILE_NAME}`,
     });
   } catch (error) {
-    console.error('Error writing to JSON file:', error);
+    console.error('Error saat menulis ke file JSON:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to write JSON file.',
+      message: 'Gagal menulis ke file JSON.',
       error: error.message,
     });
   }
@@ -53,5 +60,5 @@ app.get('/write-json', async (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server berjalan di http://localhost:${PORT}`);
 });
