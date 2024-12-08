@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
+const { tiktokDl } = require('./tikwm2.js');
 
 const app = express();
 const db = new sqlite3.Database(':memory:'); // Atau gunakan file DB untuk persistensi
