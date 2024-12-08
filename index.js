@@ -3,7 +3,14 @@ const express = require('express');
 const { tiktokDl } = require('./tikwm2.js');
 
 const app = express();
-const db = new sqlite3.Database(':memory:'); // Atau gunakan file DB untuk persistensi
+const dbPath = './database.db'; // Jalur file database
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error membuka database:', err);
+  } else {
+    console.log('Database terbuka.');
+  }
+});
 
 db.serialize(() => {
   db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
@@ -14,6 +21,16 @@ app.get('/write-json', (req, res) => {
   if (!newMessage) {
     return res.status(400).json({ success: false, message: 'Parameter "req" is required' });
   }
+
+  const timestamp = new Date().toISOString();
+  db.run('INSERT INTO messages (message, timestamp) VALUES (?, ?)', [newMessage, timestamp], function (err) {
+    if (err) {
+      console.error('Error:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan data.' });
+    }
+    res.status(200).json({ success: true, message: 'Data berhasil ditambahkan.', id: this.lastID });
+  });
+});
 
 app.get('/tikwm/download', async (req, res) => {
   try {
@@ -40,16 +57,6 @@ app.get('/tikwm/download', async (req, res) => {
     console.error('Kesalahan saat mengunduh data TikTok:', error.message);
     return res.status(500).json({ error: 'Terjadi kesalahan internal server.', detail: error.message });
   }
-});
-  
-  const timestamp = new Date().toISOString();
-  db.run('INSERT INTO messages (message, timestamp) VALUES (?, ?)', [newMessage, timestamp], function (err) {
-    if (err) {
-      console.error('Error:', err);
-      return res.status(500).json({ success: false, message: 'Gagal menyimpan data.' });
-    }
-    res.status(200).json({ success: true, message: 'Data berhasil ditambahkan.', id: this.lastID });
-  });
 });
 
 app.get('/read-json', (req, res) => {
