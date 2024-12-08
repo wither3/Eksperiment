@@ -1,46 +1,51 @@
-const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
 const cors = require('cors'); // Import cors
 const { tiktokDl } = require('./tikwm2.js'); // Import tiktokDl
+const { Upstash } = require('@upstash/redis'); // Import Upstash
 
 const app = express();
-const db = new sqlite3.Database('mydatabase.db'); // Menggunakan file DB untuk persistensi
+const upstash = new Upstash({
+  url: 'rediss://default:AYGRAAIjcDEyZDFlZTY3OWUyMzM0MDcyOTNiYmM0MDRmMWVlZWE4MXAxMA@summary-goshawk-33169.upstash.io:6379', // Ganti dengan URL Upstash Anda
+  token: 'AYGRAAIjcDEyZDFlZTY3OWUyMzM0MDcyOTNiYmM0MDRmMWVlZWE4MXAxMA' // Ganti dengan token Upstash Anda
+});
 
 // Gunakan middleware CORS
 app.use(cors());
+app.use(express.json()); // Middleware untuk parsing JSON
 
-db.serialize(() => {
-  db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
-  db.run('CREATE TABLE IF NOT EXISTS tikwm_data (id INTEGER PRIMARY KEY, url TEXT, data TEXT, timestamp TEXT)'); // Tabel untuk menyimpan data TikTok
-});
-
-app.get('/write-json', (req, res) => {
-  const newMessage = req.query.req;
+// Endpoint untuk menulis data ke Upstash
+app.post('/write-json', async (req, res) => {
+  const newMessage = req.body.message;
   if (!newMessage) {
-    return res.status(400).json({ success: false, message: 'Parameter "req" is required' });
+    return res.status(400).json({ success: false, message: 'Parameter "message" is required' });
   }
 
   const timestamp = new Date().toISOString();
-  db.run('INSERT INTO messages (message, timestamp) VALUES (?, ?)', [newMessage, timestamp], function (err) {
-    if (err) {
-      console.error('Error:', err);
-      return res.status(500).json({ success: false, message: 'Gagal menyimpan data.' });
-    }
-    res.status(200).json({ success: true, message: 'Data berhasil ditambahkan.', id: this.lastID });
-  });
+  try {
+    await upstash.set(`message:${timestamp}`, JSON.stringify({ message: newMessage, timestamp }));
+    res.status(200).json({ success: true, message: 'Data berhasil ditambahkan.' });
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal menyimpan data.' });
+  }
 });
 
-app.get('/read-json', (req, res) => {
-  db.all('SELECT * FROM messages', (err, rows) => {
-    if (err) {
-      console.error('Error:', err);
-      return res.status(500).json({ success: false, message: 'Gagal membaca data.' });
-    }
-    res.status(200).json({ success: true, data: rows });
-  });
+// Endpoint untuk membaca data dari Upstash
+app.get('/read-json', async (req, res) => {
+  try {
+    const keys = await upstash.keys('message:*');
+    const messages = await Promise.all(keys.map(async key => {
+      const messageData = await upstash.get(key);
+      return JSON.parse(messageData);
+    }));
+    res.status(200).json({ success: true, data: messages });
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal membaca data.' });
+  }
 });
 
-// Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
+// Endpoint untuk mengunduh data TikTok dan menyimpannya ke Upstash
 app.get('/tikwm/download', async (req, res) => {
   try {
     const url = req.query.url; // Ambil URL dari query parameter
@@ -49,20 +54,12 @@ app.get('/tikwm/download', async (req, res) => {
     }
 
     console.log('Mengunduh data TikTok untuk URL:', url);
-
     const tikDlData = await tiktokDl(url);
     if (tikDlData) {
       console.log('Berhasil mendapatkan data TikTok:', tikDlData);
-
-      // Simpan data TikTok ke SQLite
       const timestamp = new Date().toISOString();
-      db.run('INSERT INTO tikwm_data (url, data, timestamp) VALUES (?, ?, ?)', [url, JSON.stringify(tikDlData), timestamp], function (err) {
-        if (err) {
-          console.error('Error saat menyimpan data TikTok:', err);
-          return res.status(500).json({ error: 'Gagal menyimpan data TikTok.' });
-        }
-        return res.status(200).json({ success: true, data: tikDlData });
-      });
+      await upstash.set(`tikwm_data:${timestamp}`, JSON.stringify({ url, data: tikDlData, timestamp }));
+      return res.status(200).json({ success: true, data: tikDlData });
     } else {
       return res.status(404).json({ error: 'Tidak ada data yang ditemukan untuk URL yang diberikan.' });
     }
@@ -73,26 +70,21 @@ app.get('/tikwm/download', async (req, res) => {
 });
 
 // Endpoint untuk membaca data TikTok yang telah disimpan
-app.get('/read-tikwm', (req, res) => {
-  db.all('SELECT * FROM tikwm_data', (err, rows) => {
-    if (err) {
-      console.error('Error:', err);
-      return res.status(500).json({ success: false, message: 'Gagal membaca data TikTok.' });
-    }
-
-    // Format data menjadi lebih rapi
-    const formattedData = rows.map(row => ({
-      id: row.id,
-      url: row.url,
-      data: JSON.parse(row.data), // Mengubah string JSON kembali menjadi objek
-      timestamp: row.timestamp
+app.get('/read-tikwm', async (req, res) => {
+  try {
+    const keys = await upstash.keys('tikwm_data:*');
+    const tikwmData = await Promise.all(keys.map(async key => {
+      const data = await upstash.get(key);
+      return JSON.parse(data);
     }));
-
-    res.status(200).json({ success: true, data: formattedData });
-  });
+    res.status(200).json({ success: true, data: tikwmData });
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({ success: false, message: 'Gagal membaca data TikTok.' });
+  }
 });
 
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
-}); 
+});
