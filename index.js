@@ -9,7 +9,7 @@ app.use(express.json());
 app.get('/write-json', async (req, res) => {
   try {
     // Ambil teks dari request body
-    const { text } = req.body;
+    const { text } = req.body.req;
 
     if (!text) {
       return res.status(400).json({ success: false, message: 'Text is required' });
