@@ -55,31 +55,34 @@ app.get('/read-json', (req, res) => {
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
 app.get('/tikwm/download', async (req, res) => {
   try {
-    const url = req.query.url; // Ambil URL dari query parameter
-    if (!url) {
+    const rawUrl = req.query.url; // Ambil URL dari query parameter
+    if (!rawUrl) {
       return res.status(400).json({ error: 'URL TikTok harus diberikan dalam parameter "url".' });
     }
 
+    // Normalisasi URL
+    const url = rawUrl.replace(/\/$/, ''); // Menghapus trailing slash jika ada
     console.log('Mengunduh data TikTok untuk URL:', url);
 
     const tikDlData = await tiktokDl(url);
     if (tikDlData) {
       console.log('Berhasil mendapatkan data TikTok:', tikDlData);
 
+      const videoId = tikDlData.id; // Gunakan ID video untuk validasi
       const timestamp = new Date().toISOString();
 
-      // Periksa apakah URL sudah ada di database
-      db.get('SELECT id FROM tikwm_data WHERE url = ?', [url], (err, row) => {
+      // Periksa apakah data dengan ID video yang sama sudah ada
+      db.get('SELECT id FROM tikwm_data WHERE data LIKE ?', [`%"id":"${videoId}"%`], (err, row) => {
         if (err) {
-          console.error('Error saat memeriksa URL:', err);
+          console.error('Error saat memeriksa data:', err);
           return res.status(500).json({ error: 'Gagal memeriksa data TikTok.' });
         }
 
         if (row) {
-          // Jika URL sudah ada, perbarui data, timestamp, dan pindahkan ke paling atas
+          // Jika data sudah ada, perbarui data dan timestamp
           db.run(
-            'UPDATE tikwm_data SET data = ?, timestamp = ? WHERE id = ?',
-            [JSON.stringify(tikDlData), timestamp, row.id],
+            'UPDATE tikwm_data SET url = ?, data = ?, timestamp = ? WHERE id = ?',
+            [url, JSON.stringify(tikDlData), timestamp, row.id],
             function (err) {
               if (err) {
                 console.error('Error saat memperbarui data TikTok:', err);
@@ -89,7 +92,7 @@ app.get('/tikwm/download', async (req, res) => {
             }
           );
         } else {
-          // Jika URL belum ada, tambahkan entri baru
+          // Jika data belum ada, tambahkan entri baru
           db.run(
             'INSERT INTO tikwm_data (url, data, timestamp) VALUES (?, ?, ?)',
             [url, JSON.stringify(tikDlData), timestamp],
