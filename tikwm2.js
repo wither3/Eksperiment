@@ -28,6 +28,24 @@ async function tiktokDl(url) {
 
             let res = response.data.data;
 console.log(res);
+const timestamp = res.create_time;
+    const tanggal = new Date(timestamp * 1000);
+    const tahun = tanggal.getFullYear();
+    const bulan = tanggal.getMonth() + 1;
+    const hari = tanggal.getDate();
+    const jam = tanggal.getHours();
+    const menit = tanggal.getMinutes();
+    const detik = tanggal.getSeconds();
+
+    const Tanggalwaktu = `${tahun}-${bulan.toString().padStart(2, '0')}-${hari.toString().padStart(2, '0')} ${jam.toString().padStart(2, '0')}:${menit.toString().padStart(2, '0')}:${detik.toString().padStart(2, '0')}`;
+
+const ukuranByte = res.size;
+const ukuranMb = (ukuranByte / (1024 * 1024)).toFixed(2);
+const ukuranHd = res.hd_size;
+const ukuranVideoHd = (ukuranHd / (1024 * 1024)).toFixed(2);
+const ukuranwm = res.wm_size;
+const ukuranVideoWm = (ukuranByte / (1024 * 1024)).toFixed(2);
+    
             if (!res.size) {
                 res.images.map(v => {
                     data.push({ type: 'photo', url: v });
@@ -40,7 +58,7 @@ console.log(res);
                 );
             }
 
-            resolve({
+            resolve({          
   id: res.id,
   author: res.author.unique_id,
   name: res.author.nickname,
@@ -54,9 +72,9 @@ console.log(res);
     watermark: `https://www.tikwm.com${res.wmplay}`,
     videoHd: `https://www.tikwm.com${res.hdplay}`
   },
-  noWMSize: res.size,
-  WMSize: res.wm_size,
-  HDSize: res.hd_size,
+  noWMSize: ukuranMb,
+  WMSize: ukuranVideoWm,
+  HDSize: ukuranVideoHd,
   musicInfo: {
   id: res.music_info.id,
   author: res.music_info.author,
@@ -73,7 +91,7 @@ console.log(res);
   share: res.share_count,
   download: res.download_count,
   collect: res.collect_count,
-  createTime: res.create_time,
+  createTime: Tanggalwaktu,
   isAd: res.is_ad
   }
   
