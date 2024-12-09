@@ -1,19 +1,28 @@
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
-const cors = require('cors'); // Import cors
-const { tiktokDl } = require('./tikwm2.js'); // Import tiktokDl
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const { tiktokDl } = require('./tikwm2.js'); // Import fungsi TikTok downloader
 
 const app = express();
-const db = new sqlite3.Database(':memory:'); // Atau gunakan file DB untuk persistensi
+const DB_PATH = path.join('/tmp', 'database.sqlite'); // Simpan database di folder /tmp
+const dbExists = fs.existsSync(DB_PATH);
+const db = new sqlite3.Database(DB_PATH); // Gunakan file database di /tmp
 
 // Gunakan middleware CORS
 app.use(cors());
 
-db.serialize(() => {
-  db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
-  db.run('CREATE TABLE IF NOT EXISTS tikwm_data (id INTEGER PRIMARY KEY, url TEXT, data TEXT, timestamp TEXT)'); // Tabel untuk menyimpan data TikTok
-});
+// Jika database belum ada, buat tabel
+if (!dbExists) {
+  db.serialize(() => {
+    console.log('Membuat tabel baru di database...');
+    db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, message TEXT, timestamp TEXT)');
+    db.run('CREATE TABLE IF NOT EXISTS tikwm_data (id INTEGER PRIMARY KEY, url TEXT, data TEXT, timestamp TEXT)');
+  });
+}
 
+// Endpoint untuk menulis data ke database
 app.get('/write-json', (req, res) => {
   const newMessage = req.query.req;
   if (!newMessage) {
@@ -30,6 +39,7 @@ app.get('/write-json', (req, res) => {
   });
 });
 
+// Endpoint untuk membaca semua data dari database
 app.get('/read-json', (req, res) => {
   db.all('SELECT * FROM messages', (err, rows) => {
     if (err) {
@@ -92,7 +102,8 @@ app.get('/read-tikwm', (req, res) => {
   });
 });
 
+// Jalankan server
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Server berjalan di http`);
+  console.log(`Server berjalan di http://localhost:${PORT}`);
 });
