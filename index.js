@@ -51,6 +51,7 @@ app.get('/read-json', (req, res) => {
 });
 
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
+// Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
 app.get('/tikwm/download', async (req, res) => {
   try {
     const url = req.query.url; // Ambil URL dari query parameter
@@ -64,14 +65,42 @@ app.get('/tikwm/download', async (req, res) => {
     if (tikDlData) {
       console.log('Berhasil mendapatkan data TikTok:', tikDlData);
 
-      // Simpan data TikTok ke SQLite
       const timestamp = new Date().toISOString();
-      db.run('INSERT INTO tikwm_data (url, data, timestamp) VALUES (?, ?, ?)', [url, JSON.stringify(tikDlData), timestamp], function (err) {
+
+      // Periksa apakah URL sudah ada di database
+      db.get('SELECT id FROM tikwm_data WHERE url = ?', [url], (err, row) => {
         if (err) {
-          console.error('Error saat menyimpan data TikTok:', err);
-          return res.status(500).json({ error: 'Gagal menyimpan data TikTok.' });
+          console.error('Error saat memeriksa URL:', err);
+          return res.status(500).json({ error: 'Gagal memeriksa data TikTok.' });
         }
-        return res.status(200).json({ success: true, data: tikDlData });
+
+        if (row) {
+          // Jika URL sudah ada, perbarui data dan timestamp
+          db.run(
+            'UPDATE tikwm_data SET data = ?, timestamp = ? WHERE id = ?',
+            [JSON.stringify(tikDlData), timestamp, row.id],
+            function (err) {
+              if (err) {
+                console.error('Error saat memperbarui data TikTok:', err);
+                return res.status(500).json({ error: 'Gagal memperbarui data TikTok.' });
+              }
+              return res.status(200).json({ success: true, message: 'Data diperbarui.', data: tikDlData });
+            }
+          );
+        } else {
+          // Jika URL belum ada, tambahkan entri baru
+          db.run(
+            'INSERT INTO tikwm_data (url, data, timestamp) VALUES (?, ?, ?)',
+            [url, JSON.stringify(tikDlData), timestamp],
+            function (err) {
+              if (err) {
+                console.error('Error saat menyimpan data TikTok:', err);
+                return res.status(500).json({ error: 'Gagal menyimpan data TikTok.' });
+              }
+              return res.status(200).json({ success: true, message: 'Data ditambahkan.', data: tikDlData });
+            }
+          );
+        }
       });
     } else {
       return res.status(404).json({ error: 'Tidak ada data yang ditemukan untuk URL yang diberikan.' });
@@ -81,6 +110,27 @@ app.get('/tikwm/download', async (req, res) => {
     return res.status(500).json({ error: 'Terjadi kesalahan internal server.', detail: error.message });
   }
 });
+
+// Endpoint untuk membaca data TikTok yang telah disimpan, diurutkan berdasarkan timestamp terbaru
+app.get('/read-tikwm', (req, res) => {
+  db.all('SELECT * FROM tikwm_data ORDER BY timestamp DESC', (err, rows) => {
+    if (err) {
+      console.error('Error:', err);
+      return res.status(500).json({ success: false, message: 'Gagal membaca data TikTok.' });
+    }
+
+    // Format data menjadi lebih rapi
+    const formattedData = rows.map(row => ({
+      id: row.id,
+      url: row.url,
+      data: JSON.parse(row.data), // Mengubah string JSON kembali menjadi objek
+      timestamp: row.timestamp
+    }));
+
+    res.status(200).json({ success: true, data: formattedData });
+  });
+});
+
 
 // Endpoint untuk membaca data TikTok yang telah disimpan
 app.get('/read-tikwm', (req, res) => {
