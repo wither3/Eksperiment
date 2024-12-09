@@ -53,6 +53,23 @@ app.get('/read-json', (req, res) => {
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
+const formatToWITA = (utcDate) => {
+  const dateObj = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000); // Tambahkan 8 jam ke waktu UTC
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Makassar',
+  };
+  return new Intl.DateTimeFormat('id-ID', options).format(dateObj);
+};
+
+// Di dalam route handler
 app.get('/tikwm/download', async (req, res) => {
   try {
     const rawUrl = req.query.url;
@@ -66,11 +83,10 @@ app.get('/tikwm/download', async (req, res) => {
     const tikDlData = await tiktokDl(url);
     if (tikDlData) {
       const videoId = tikDlData.id;
-      
-      // Format timestamp ke format baru
-      const dateObj = new Date();
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      const tanggalDiFetch = new Intl.DateTimeFormat('id-ID', options).format(dateObj);
+
+      // Dapatkan waktu saat ini dan format ke WITA
+      const nowUTC = new Date();
+      const tanggalDiFetch = formatToWITA(nowUTC);
 
       // Periksa apakah data dengan ID video yang sama sudah ada
       db.get('SELECT id FROM tikwm_data WHERE data LIKE ?', [`%"id":"${videoId}"%`], (err, row) => {
@@ -115,6 +131,7 @@ app.get('/tikwm/download', async (req, res) => {
     return res.status(500).json({ error: 'Terjadi kesalahan internal server.', detail: error.message });
   }
 });
+
 
 // Endpoint untuk membaca data TikTok yang telah disimpan, diurutkan berdasarkan timestamp terbaru
 app.get('/read-tikwm', (req, res) => {
