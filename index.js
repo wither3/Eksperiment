@@ -55,21 +55,22 @@ app.get('/read-json', (req, res) => {
 // Endpoint untuk mengunduh data TikTok dan menyimpannya ke SQLite
 app.get('/tikwm/download', async (req, res) => {
   try {
-    const rawUrl = req.query.url; // Ambil URL dari query parameter
+    const rawUrl = req.query.url;
     if (!rawUrl) {
       return res.status(400).json({ error: 'URL TikTok harus diberikan dalam parameter "url".' });
     }
 
     // Normalisasi URL
     const url = rawUrl.replace(/\/$/, ''); // Menghapus trailing slash jika ada
-    console.log('Mengunduh data TikTok untuk URL:', url);
 
     const tikDlData = await tiktokDl(url);
     if (tikDlData) {
-      console.log('Berhasil mendapatkan data TikTok:', tikDlData);
-
-      const videoId = tikDlData.id; // Gunakan ID video untuk validasi
-      const timestamp = new Date().toISOString();
+      const videoId = tikDlData.id;
+      
+      // Format timestamp ke format baru
+      const dateObj = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const tanggalDiFetch = new Intl.DateTimeFormat('id-ID', options).format(dateObj);
 
       // Periksa apakah data dengan ID video yang sama sudah ada
       db.get('SELECT id FROM tikwm_data WHERE data LIKE ?', [`%"id":"${videoId}"%`], (err, row) => {
@@ -79,29 +80,29 @@ app.get('/tikwm/download', async (req, res) => {
         }
 
         if (row) {
-          // Jika data sudah ada, perbarui data dan timestamp
+          // Jika data sudah ada, perbarui data dan tanggalDiFetch
           db.run(
             'UPDATE tikwm_data SET url = ?, data = ?, timestamp = ? WHERE id = ?',
-            [url, JSON.stringify(tikDlData), timestamp, row.id],
+            [url, JSON.stringify(tikDlData), tanggalDiFetch, row.id],
             function (err) {
               if (err) {
                 console.error('Error saat memperbarui data TikTok:', err);
                 return res.status(500).json({ error: 'Gagal memperbarui data TikTok.' });
               }
-              return res.status(200).json({ success: true, message: 'Data diperbarui.', data: tikDlData });
+              return res.status(200).json({ success: true, message: 'Data diperbarui.', data: { ...tikDlData, tanggalDiFetch } });
             }
           );
         } else {
           // Jika data belum ada, tambahkan entri baru
           db.run(
             'INSERT INTO tikwm_data (url, data, timestamp) VALUES (?, ?, ?)',
-            [url, JSON.stringify(tikDlData), timestamp],
+            [url, JSON.stringify(tikDlData), tanggalDiFetch],
             function (err) {
               if (err) {
                 console.error('Error saat menyimpan data TikTok:', err);
                 return res.status(500).json({ error: 'Gagal menyimpan data TikTok.' });
               }
-              return res.status(200).json({ success: true, message: 'Data ditambahkan.', data: tikDlData });
+              return res.status(200).json({ success: true, message: 'Data ditambahkan.', data: { ...tikDlData, tanggalDiFetch } });
             }
           );
         }
